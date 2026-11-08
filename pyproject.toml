@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "socialdisk"
+version = "2.0.0"
+description = "Multi-platform steganography suite — hide & encrypt data inside images, video, and audio that survive social media compression"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+keywords = ["steganography", "cryptography", "social-media", "instagram", "whatsapp", "privacy"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Multimedia",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "opencv-python>=4.7",
+    "cryptography>=41.0",
+    "reedsolo>=1.7",
+    "rich>=13.0",
+]
+
+[project.scripts]
+socialdisk = "cli:main"
+
+[project.urls]
+Homepage = "https://github.com/YOUR_USERNAME/SocialDisk"
+Issues = "https://github.com/YOUR_USERNAME/SocialDisk/issues"

@@ -1,0 +1,66 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "## Bug Report — SocialDisk"
+
+  - type: input
+    id: python_version
+    attributes:
+      label: Python Version
+      placeholder: "e.g. 3.11.4"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: "e.g. Windows 11, Ubuntu 22.04, macOS 14"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Affected Engine
+      options:
+        - Image (DCT)
+        - Video (HyperGrid)
+        - Audio (Acoustic FSK)
+        - CLI
+        - API
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Platform Profile Used
+      placeholder: "e.g. instagram, whatsapp, discord"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the bug clearly
+    validations:
+      required: true
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Error Traceback
+      render: python
+      description: Paste the full error message here
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal code or commands to reproduce
+      render: python

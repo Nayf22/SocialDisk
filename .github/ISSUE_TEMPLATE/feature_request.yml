@@ -1,0 +1,39 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: "## Feature Request — SocialDisk"
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - New Platform Support
+        - New Engine Type
+        - CLI Improvement
+        - Performance
+        - API
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: What do you want to see added or changed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: Why is this feature useful? What problem does it solve?
+    validations:
+      required: true
