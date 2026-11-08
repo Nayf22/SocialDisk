@@ -1,36 +1,36 @@
-﻿"""
-Acoustic FSK Engine — المودم الصوتي المقاوم لضغط AAC/Opus
+"""
+Acoustic FSK Engine — Audio modem resistant to AAC/Opus compression
 
-الخوارزمية (Frequency Shift Keying — FSK) المُعاد تصميمها:
+Algorithm (Frequency Shift Keying — FSK) redesigned:
   ┌─────────────────────────────────────────────────────────────────┐
-  │ هيكل الإشارة المُرمَّزة (Protocol Frame):                      │
+  │ Encoded Signal Structure (Protocol Frame):                       │
   │                                                                  │
-  │  [صمت 0.25s] [preamble SYNC 0.5s] [header 32 بت] [data N بت] [صمت 0.25s] │
+  │  [silence 0.25s] [preamble SYNC 0.5s] [header 32 bits] [data N bits] [silence 0.25s] │
   │                                                                  │
-  │  preamble: نغمة sync_freq مستمرة 0.5s — للكشف عن بداية الإشارة │
-  │  header:   32 بت تُرسَل بتردد SYNC نفسه (بت=1) أو freq_zero (بت=0) │
-  │            تُمثِّل عدد بتات البيانات (N) مُشفَّراً بـ XOR لإخفائه │
-  │  data:     N بت — bit=0 → freq_zero، bit=1 → freq_one           │
+  │  preamble: continuous sync_freq tone 0.5s — detects signal start │
+  │  header:   32 bits sent using SYNC freq (bit=1) or freq_zero (bit=0) │
+  │            represents the number of data bits (N) XOR-encoded for concealment │
+  │  data:     N bits — bit=0 → freq_zero, bit=1 → freq_one          │
   │                                                                  │
-  │ فك الترميز:                                                      │
-  │  1. كشف بداية preamble (أول نافذة ذات قوة SYNC عالية)          │
-  │  2. تخطي preamble (0.5s ثابت)                                   │
-  │  3. قراءة 32 بت header → استخراج N                             │
-  │  4. قراءة N بت بيانات                                           │
-  │  5. VaultCore.unpack_payload لفك التشفير                        │
+  │ Decoding:                                                         │
+  │  1. Detect preamble start (first window with high SYNC power)    │
+  │  2. Skip preamble (fixed 0.5s)                                   │
+  │  3. Read 32 header bits → extract N                              │
+  │  4. Read N data bits                                             │
+  │  5. VaultCore.unpack_payload to decrypt                          │
   └─────────────────────────────────────────────────────────────────┘
 
-لماذا header مضمَّن في الإشارة؟
-  الكشف عن نهاية preamble بالـ FFT يفشل لأن هارمونيكات ترددات البيانات
-  (1500 Hz / 2700 Hz) قد تُولِّد مكوناً عند تردد SYNC (900 Hz)،
-  مما يجعل خوارزمية "آخر ظهور للـ SYNC" غير موثوقة.
-  الحل: نضمِّن N مباشرة في الإشارة لنعرف حجم البيانات بدقة مطلقة.
+Why embed the header in the signal?
+  Detecting preamble end via FFT fails because harmonics of data frequencies
+  (1500 Hz / 2700 Hz) can produce a component at the SYNC frequency (900 Hz),
+  making a "last SYNC appearance" algorithm unreliable.
+  Solution: embed N directly in the signal to know the data size with absolute precision.
 
-لماذا ترددات 1500/2700/900 Hz؟
-  - AAC عند 128kbps: نطاق 20Hz–16kHz (آمن)
-  - Opus عند 32kbps: نطاق 400Hz–7700Hz (آمن)
-  - بُعد 1200Hz بين f0/f1 يُقلل الخلط عند ضغط قوي
-  - 900 Hz للـ SYNC: بعيد عن 1500/2700 ولا يتداخل
+Why frequencies 1500/2700/900 Hz?
+  - AAC at 128kbps: range 20Hz–16kHz (safe)
+  - Opus at 32kbps: range 400Hz–7700Hz (safe)
+  - 1200Hz gap between f0/f1 reduces mixing under heavy compression
+  - 900 Hz for SYNC: far from 1500/2700 and does not interfere
 """
 from __future__ import annotations
 
@@ -46,29 +46,29 @@ from socialdisk.core import VaultCore
 from socialdisk.platforms import AudioProfile
 
 # ───────────────────────────────────────────────────────────────────
-#  ثوابت بروتوكول الإطار
+#  Frame Protocol Constants
 # ───────────────────────────────────────────────────────────────────
-_HEADER_BITS    = 32          # عدد بتات حقل header (يُخزن N بت البيانات)
-_HEADER_XOR_KEY = 0xA5C3E1F7  # مفتاح XOR لإخفاء قيمة N (تجنب أنماط متكررة)
-_PREAMBLE_DUR   = 0.5         # مدة نغمة SYNC بالثانية
-_SILENCE_DUR    = 0.25        # مدة الصمت قبل/بعد الإشارة
+_HEADER_BITS    = 32          # Number of bits in the header field (stores N data bits)
+_HEADER_XOR_KEY = 0xA5C3E1F7  # XOR key to conceal N value (avoids repetitive patterns)
+_PREAMBLE_DUR   = 0.5         # SYNC tone duration in seconds
+_SILENCE_DUR    = 0.25        # Silence duration before/after the signal
 
 
 class AcousticFSKEngine:
     """
-    محرك المودم الصوتي (Acoustic FSK).
-    يُحوِّل البيانات إلى موجات صوتية بترددات مسموعة وآمنة من ضغط المنصة.
+    Acoustic FSK modem engine.
+    Converts data into audio waves using audible frequencies safe from platform compression.
 
-    هيكل الإشارة (Protocol Frame):
-        [صمت 0.25s] → [SYNC preamble 0.5s] → [32-bit header] → [data bits] → [صمت 0.25s]
+    Signal Structure (Protocol Frame):
+        [silence 0.25s] → [SYNC preamble 0.5s] → [32-bit header] → [data bits] → [silence 0.25s]
 
-    حيث header = عدد بتات البيانات (N) مُشفَّر بـ XOR، مُرسَل باستخدام:
-        بت=1 → نغمة sync_freq (نفس الـ preamble)
-        بت=0 → نغمة freq_zero
+    Where header = number of data bits (N) XOR-encoded, transmitted using:
+        bit=1 → sync_freq tone (same as preamble)
+        bit=0 → freq_zero tone
     """
 
     # ------------------------------------------------------------------ #
-    #  مساعد توليد النغمات مع Hanning fade-in/out
+    #  Tone generation helper with Hanning fade-in/out
     # ------------------------------------------------------------------ #
     @staticmethod
     def _make_tone(
@@ -78,8 +78,8 @@ class AcousticFSKEngine:
         amplitude: float = 0.85,
     ) -> np.ndarray:
         """
-        توليد نغمة جيبية نقية مع تلاشٍ ناعم (Hanning window على أطراف 5%).
-        التلاشي يمنع الطقطقة (click artifact) عند الانتقال بين النغمات.
+        Generate a pure sine tone with smooth fade (Hanning window on 5% of edges).
+        The fade prevents click artifacts when transitioning between tones.
         """
         n       = max(1, int(sample_rate * duration))
         t       = np.linspace(0, duration, n, endpoint=False)
@@ -90,7 +90,7 @@ class AcousticFSKEngine:
         return signal.astype(np.float32)
 
     # ------------------------------------------------------------------ #
-    #  مساعد حساب قوة التردد عبر FFT (vectorized)
+    #  FFT frequency power helper (vectorized)
     # ------------------------------------------------------------------ #
     @staticmethod
     def _fft_magnitude(
@@ -99,8 +99,8 @@ class AcousticFSKEngine:
         sample_rate: int,
     ) -> float:
         """
-        حساب قوة تردد معين عبر FFT مع Hanning window لتقليل spectral leakage.
-        يأخذ متوسط ±2 bin للحصول على قراءة أكثر استقراراً.
+        Calculate the power of a specific frequency via FFT with Hanning window to reduce spectral leakage.
+        Averages ±2 bins for a more stable reading.
         """
         n     = len(samples)
         win   = np.hanning(n)
@@ -112,26 +112,26 @@ class AcousticFSKEngine:
         return float(np.mean(spec[lo:hi]))
 
     # ------------------------------------------------------------------ #
-    #  ترميز 32-bit integer إلى قائمة بتات (MSB first)
+    #  Encode 32-bit integer to bit list (MSB first)
     # ------------------------------------------------------------------ #
     @staticmethod
     def _int_to_bits(value: int, n_bits: int = 32) -> list[int]:
-        """تحويل عدد صحيح إلى قائمة بتات بترتيب MSB أولاً."""
+        """Convert an integer to a bit list in MSB-first order."""
         return [(value >> (n_bits - 1 - i)) & 1 for i in range(n_bits)]
 
     # ------------------------------------------------------------------ #
-    #  فك ترميز قائمة بتات إلى integer (MSB first)
+    #  Decode bit list to integer (MSB first)
     # ------------------------------------------------------------------ #
     @staticmethod
     def _bits_to_int(bits: list[int]) -> int:
-        """تحويل قائمة بتات (MSB أولاً) إلى عدد صحيح."""
+        """Convert a bit list (MSB-first) to an integer."""
         result = 0
         for b in bits:
             result = (result << 1) | int(b)
         return result
 
     # ------------------------------------------------------------------ #
-    #  الترميز: بيانات → WAV
+    #  Encoding: data → WAV
     # ------------------------------------------------------------------ #
     @classmethod
     def encode_wav(
@@ -144,23 +144,23 @@ class AcousticFSKEngine:
         ecc_symbols: Optional[int] = None,
     ) -> dict:
         """
-        تحويل البيانات إلى ملف WAV مُشفَّر بـ FSK.
+        Convert data into an FSK-encoded WAV file.
 
-        هيكل الإشارة المُولَّدة:
-            [صمت 0.25s] [SYNC 0.5s] [32-bit header] [N بت بيانات] [صمت 0.25s]
+        Generated signal structure:
+            [silence 0.25s] [SYNC 0.5s] [32-bit header] [N data bits] [silence 0.25s]
 
-        حيث header = (N XOR _HEADER_XOR_KEY) مُرسَل بـ SYNC/f0 بدلاً من f0/f1
-        حتى لا يتداخل مع نمط البيانات.
+        Where header = (N XOR _HEADER_XOR_KEY) transmitted using SYNC/f0 instead of f0/f1
+        to avoid overlap with the data pattern.
 
         Args:
-            output_wav:  مسار ملف الصوت الناتج (.wav).
-            payload:     البيانات السرية (bytes).
-            password:    كلمة المرور.
-            profile:     ملف إعداد المنصة (يُحدد الترددات والسرعة).
-            ecc_symbols: يتجاوز profile.ecc_symbols إن أُعطي.
+            output_wav:  Path to the output audio file (.wav).
+            payload:     Secret data (bytes).
+            password:    Password.
+            profile:     Platform configuration profile (sets frequencies and speed).
+            ecc_symbols: Overrides profile.ecc_symbols if given.
 
         Returns:
-            dict: إحصائيات الملف الصوتي.
+            dict: Audio file statistics.
         """
         _ecc  = ecc_symbols or (profile.ecc_symbols if profile else 64)
         _sr   = profile.sample_rate if profile else 44100
@@ -169,53 +169,53 @@ class AcousticFSKEngine:
         _f1   = profile.freq_one    if profile else 2700.0
         _fs   = profile.sync_freq   if profile else 900.0
 
-        # --- تحزيم البيانات → بتات
+        # --- Pack data → bits
         data_bits    = VaultCore.pack_payload(payload, password, ecc_symbols=_ecc)
         n_data_bits  = len(data_bits)
         bit_duration = 1.0 / _baud
 
-        spb = _sr // _baud  # عدد العينات لكل بت (294 عند 44100/150)
+        spb = _sr // _baud  # samples per bit (294 at 44100/150)
 
-        # --- توليد النغمات الأساسية (مُولَّدة مسبقاً لكفاءة أعلى)
-        tone0     = cls._make_tone(_f0, bit_duration, _sr)   # بيانات: بت=0
-        tone1     = cls._make_tone(_f1, bit_duration, _sr)   # بيانات: بت=1
-        tone_sync = cls._make_tone(_fs, bit_duration, _sr)   # header/preamble: بت=1
+        # --- Pre-generate base tones (pre-generated for efficiency)
+        tone0     = cls._make_tone(_f0, bit_duration, _sr)   # data: bit=0
+        tone1     = cls._make_tone(_f1, bit_duration, _sr)   # data: bit=1
+        tone_sync = cls._make_tone(_fs, bit_duration, _sr)   # header/preamble: bit=1
 
-        # --- header = (n_data_bits XOR _HEADER_XOR_KEY) — 32 بت MSB أولاً
+        # --- header = (n_data_bits XOR _HEADER_XOR_KEY) — 32 bits MSB-first
         header_val  = n_data_bits ^ _HEADER_XOR_KEY
         header_bits = cls._int_to_bits(header_val, _HEADER_BITS)
 
-        # --- حساب أحجام القطع بوحدة بتات (spb عينة لكل بت)
-        #   هذا يضمن أن كل حدٍّ في الإشارة يقع عند مضاعف دقيق لـ spb،
-        #   مما يُلغي الحاجة لأي محاذاة عند فك الترميز.
+        # --- Calculate segment sizes in bit units (spb samples per bit)
+        #   This ensures every boundary in the signal falls at an exact multiple of spb,
+        #   eliminating the need for any alignment during decoding.
         #
-        #   SILENCE_BITS = عدد البتات للصمت (أقرب عدد صحيح لـ 0.25s)
-        #   PREAMBLE_BITS = عدد البتات للـ preamble (أقرب عدد صحيح لـ 0.5s)
+        #   SILENCE_BITS = number of bits for silence (nearest integer to 0.25s)
+        #   PREAMBLE_BITS = number of bits for preamble (nearest integer to 0.5s)
         #
-        SILENCE_BITS  = max(1, round(_sr * _SILENCE_DUR  / spb))  # ≈37 بت
-        PREAMBLE_BITS = max(1, round(_sr * _PREAMBLE_DUR / spb))  # ≈75 بت
+        SILENCE_BITS  = max(1, round(_sr * _SILENCE_DUR  / spb))  # ≈37 bits
+        PREAMBLE_BITS = max(1, round(_sr * _PREAMBLE_DUR / spb))  # ≈75 bits
 
-        # --- بناء الإشارة الكاملة (كل عنصر = نغمة بمقدار spb عينة)
+        # --- Build the complete signal (each element = one tone of spb samples)
         parts: list[np.ndarray] = []
 
-        # صمت بداية (SILENCE_BITS نغمة صفرية)
+        # Leading silence (SILENCE_BITS zero tones)
         for _ in range(SILENCE_BITS):
             parts.append(np.zeros(spb, dtype=np.float32))
 
-        # preamble SYNC (PREAMBLE_BITS نغمة بتردد SYNC)
+        # SYNC preamble (PREAMBLE_BITS tones at SYNC frequency)
         for _ in range(PREAMBLE_BITS):
             parts.append(tone_sync)
 
-        # header bits (بت=1 → sync_freq، بت=0 → freq_zero)
-        # استخدام sync_freq للـ header يُميِّزه عن بيانات البيانات (التي تستخدم f0/f1)
+        # Header bits (bit=1 → sync_freq, bit=0 → freq_zero)
+        # Using sync_freq for header distinguishes it from data bits (which use f0/f1)
         for b in header_bits:
             parts.append(tone_sync if b == 1 else tone0)
 
-        # data bits (بت=1 → freq_one، بت=0 → freq_zero)
+        # Data bits (bit=1 → freq_one, bit=0 → freq_zero)
         for b in data_bits:
             parts.append(tone1 if b == 1 else tone0)
 
-        # صمت نهاية (SILENCE_BITS نغمة صفرية)
+        # Trailing silence (SILENCE_BITS zero tones)
         for _ in range(SILENCE_BITS):
             parts.append(np.zeros(spb, dtype=np.float32))
 
@@ -236,7 +236,7 @@ class AcousticFSKEngine:
         }
 
     # ------------------------------------------------------------------ #
-    #  فك الترميز: WAV/MP4 → بيانات
+    #  Decoding: WAV/MP4 → data
     # ------------------------------------------------------------------ #
     @classmethod
     def decode_media(
@@ -248,24 +248,24 @@ class AcousticFSKEngine:
         ecc_symbols: Optional[int] = None,
     ) -> bytes:
         """
-        استخراج البيانات من ملف صوتي WAV أو فيديو MP4.
+        Extract data from a WAV audio file or MP4 video.
 
-        خطوات فك الترميز:
-          1. إن كان المدخل MP4: استخراج الصوت عبر ffmpeg
-          2. كشف بداية preamble SYNC (أول نافذة ذات قوة عالية)
-          3. تخطي preamble (0.5s ثابت) للوصول إلى header
-          4. قراءة 32 بت header → استخراج N (عدد بتات البيانات)
-          5. قراءة N بت بيانات (FFT vectorized)
-          6. VaultCore.unpack_payload لفك التشفير
+        Decoding steps:
+          1. If input is MP4: extract audio via ffmpeg
+          2. Detect preamble SYNC start (first window with high power)
+          3. Skip preamble (fixed 0.5s) to reach the header
+          4. Read 32 header bits → extract N (number of data bits)
+          5. Read N data bits (FFT vectorized)
+          6. VaultCore.unpack_payload to decrypt
 
         Args:
-            media_path:  مسار الملف الصوتي (.wav) أو الفيديو (.mp4/.mkv/...).
-            password:    كلمة المرور.
-            profile:     ملف إعداد المنصة.
-            ecc_symbols: يتجاوز profile.ecc_symbols إن أُعطي.
+            media_path:  Path to the audio file (.wav) or video (.mp4/.mkv/...).
+            password:    Password.
+            profile:     Platform configuration profile.
+            ecc_symbols: Overrides profile.ecc_symbols if given.
 
         Returns:
-            البيانات المستخرجة (bytes).
+            Extracted data (bytes).
         """
         _ecc  = ecc_symbols or (profile.ecc_symbols if profile else 64)
         _sr   = profile.sample_rate if profile else 44100
@@ -274,7 +274,7 @@ class AcousticFSKEngine:
         _f1   = profile.freq_one    if profile else 2700.0
         _fs   = profile.sync_freq   if profile else 900.0
 
-        # --- استخراج الصوت من فيديو عبر ffmpeg إن لزم
+        # --- Extract audio from video via ffmpeg if needed
         temp_wav = None
         if not media_path.lower().endswith(".wav"):
             temp_wav = "_socialdisk_temp_audio.wav"
@@ -292,8 +292,8 @@ class AcousticFSKEngine:
                 )
             except subprocess.CalledProcessError:
                 raise RuntimeError(
-                    "فشل استخراج الصوت من الفيديو.\n"
-                    "تأكد من تثبيت ffmpeg وإضافته إلى PATH."
+                    "Failed to extract audio from video.\n"
+                    "Ensure ffmpeg is installed and added to PATH."
                 )
             target = temp_wav
         else:
@@ -302,7 +302,7 @@ class AcousticFSKEngine:
         try:
             sr_read, raw_data = wavfile.read(target)
 
-            # --- تحويل إلى mono float32 مُطبَّع إلى [-1, 1]
+            # --- Convert to mono float32 normalised to [-1, 1]
             if raw_data.ndim > 1:
                 raw_data = raw_data[:, 0]
             data = raw_data.astype(np.float32)
@@ -310,7 +310,7 @@ class AcousticFSKEngine:
             if max_val > 0:
                 data = data / max_val
 
-            # --- إعادة أخذ العينات إن اختلف معدل التسجيل
+            # --- Resample if recorded sample rate differs
             if sr_read != _sr:
                 from scipy.signal import resample_poly
                 from math import gcd
@@ -319,71 +319,72 @@ class AcousticFSKEngine:
                 dn   = int(sr_read) // g
                 data = resample_poly(data, up, dn).astype(np.float32)
 
-            spb = _sr // _baud   # عدد العينات لكل بت / نغمة
+            spb = _sr // _baud   # samples per bit / tone
 
-            # حساب SILENCE_BITS و PREAMBLE_BITS بنفس طريقة encode_wav
-            # (يجب أن تكون متطابقة تماماً حتى تتحقق المحاذاة)
-            SILENCE_BITS  = max(1, round(_sr * _SILENCE_DUR  / spb))  # ≈37 بت
-            PREAMBLE_BITS = max(1, round(_sr * _PREAMBLE_DUR / spb))  # ≈75 بت
+            # Calculate SILENCE_BITS and PREAMBLE_BITS using the same method as encode_wav
+            # (must be identical to ensure alignment)
+            SILENCE_BITS  = max(1, round(_sr * _SILENCE_DUR  / spb))  # ≈37 bits
+            PREAMBLE_BITS = max(1, round(_sr * _PREAMBLE_DUR / spb))  # ≈75 bits
 
             # ══════════════════════════════════════════════════════════
-            #  STEP 1: التحقق من وجود preamble (SYNC) وجودته
+            #  STEP 1: Verify preamble (SYNC) presence and quality
             #
-            #  نمسح نطاق الـ SILENCE المتوقع للتحقق من أن الإشارة
-            #  بدأت بشكل صحيح. نستخدم هذا للكشف المبكر عن أخطاء
-            #  في الملف (ملف خاطئ / غير مُرمَّز / تالف).
+            #  Scan the expected SILENCE range to verify the signal
+            #  started correctly. Used for early detection of file errors
+            #  (wrong file / not encoded / corrupted).
             #
-            #  لا نستخدم نتيجة هذا الكشف لتحديد بداية header،
-            #  لأن SILENCE_BITS وPREAMBLE_BITS ثابتان ومعروفان مسبقاً.
+            #  We do not use this detection result to determine the header
+            #  start, because SILENCE_BITS and PREAMBLE_BITS are fixed and
+            #  known in advance.
             # ══════════════════════════════════════════════════════════
-            # نطاق البحث عن preamble: من SILENCE_BITS إلى SILENCE_BITS+PREAMBLE_BITS
+            # Search range for preamble: from SILENCE_BITS to SILENCE_BITS+PREAMBLE_BITS
             preamble_region_start = SILENCE_BITS * spb
             preamble_region_end   = (SILENCE_BITS + PREAMBLE_BITS) * spb
 
             if preamble_region_end > len(data):
                 raise ValueError(
-                    "الملف الصوتي قصير جداً — يجب أن يحتوي على preamble SYNC.\n"
-                    "تأكد أن الملف مُرمَّز بـ socialdisk وغير مقطوع."
+                    "Audio file is too short — it must contain a SYNC preamble.\n"
+                    "Ensure the file was encoded with SocialDisk and is not truncated."
                 )
 
-            # قياس قوة SYNC في منتصف الـ preamble المتوقع (للتحقق فقط)
+            # Measure SYNC power at the midpoint of the expected preamble (verification only)
             mid_preamble = preamble_region_start + (PREAMBLE_BITS // 2) * spb
             chunk_mid    = data[mid_preamble: mid_preamble + spb]
             sync_power_mid = cls._fft_magnitude(chunk_mid, _fs, _sr)
 
-            # قياس قوة SYNC في منتصف الـ SILENCE المتوقع قبله
+            # Measure SYNC power at the midpoint of the expected preceding silence
             mid_silence  = (SILENCE_BITS // 2) * spb
             chunk_sil    = data[mid_silence: mid_silence + spb]
             sync_power_sil = cls._fft_magnitude(chunk_sil, _fs, _sr)
 
-            # يجب أن تكون قوة SYNC في preamble أعلى بكثير من الصمت
+            # SYNC power in preamble must be significantly higher than in silence
             if sync_power_mid < 0.5 or (sync_power_sil > 0 and sync_power_mid < sync_power_sil * 2.0):
                 raise ValueError(
-                    "لم يُعثر على نغمة المزامنة (preamble) في الموضع المتوقع.\n"
-                    "تأكد أن الملف مُرمَّز بـ socialdisk."
+                    "Sync tone (preamble) not found at the expected position.\n"
+                    "Ensure the file was encoded with SocialDisk."
                 )
 
             # ══════════════════════════════════════════════════════════
-            #  STEP 2: تحديد بداية header بدقة مطلقة
+            #  STEP 2: Determine header start with absolute precision
             #
-            #  بداية header = (SILENCE_BITS + PREAMBLE_BITS) * spb
-            #  هذا ثابت ومتطابق مع encode_wav تماماً، لأن كلاهما
-            #  يستخدم نفس الصيغة لحساب SILENCE_BITS وPREAMBLE_BITS.
-            #  لا توجد حاجة لأي محاذاة أو تقريب.
+            #  Header start = (SILENCE_BITS + PREAMBLE_BITS) * spb
+            #  This is fixed and identical to encode_wav, because both
+            #  use the same formula to calculate SILENCE_BITS and PREAMBLE_BITS.
+            #  No alignment or rounding is needed.
             # ══════════════════════════════════════════════════════════
             header_start = (SILENCE_BITS + PREAMBLE_BITS) * spb
 
             if header_start + _HEADER_BITS * spb > len(data):
                 raise ValueError(
-                    "الملف الصوتي قصير — لا يحتوي على header كامل.\n"
-                    "تأكد أن الملف مُرمَّز بـ socialdisk وغير مقطوع."
+                    "Audio file is too short — it does not contain a complete header.\n"
+                    "Ensure the file was encoded with SocialDisk and is not truncated."
                 )
 
             # ══════════════════════════════════════════════════════════
-            #  STEP 3: قراءة 32-bit header → استخراج N (عدد بتات البيانات)
+            #  STEP 3: Read 32-bit header → extract N (number of data bits)
             #
-            #  header يستخدم: بت=1 → sync_freq، بت=0 → freq_zero
-            #  هذا يُميِّزه عن بيانات البيانات (بت=1 → freq_one)
+            #  Header uses: bit=1 → sync_freq, bit=0 → freq_zero
+            #  This distinguishes it from data bits (bit=1 → freq_one)
             #  N = header_value XOR _HEADER_XOR_KEY
             # ══════════════════════════════════════════════════════════
             header_bits: list[int] = []
@@ -398,52 +399,52 @@ class AcousticFSKEngine:
             header_val  = cls._bits_to_int(header_bits)
             n_data_bits = header_val ^ _HEADER_XOR_KEY
 
-            # التحقق من صحة N
-            data_start = pos   # بداية البيانات (بعد header مباشرة)
+            # Validate N
+            data_start = pos   # data start (immediately after header)
             available  = (len(data) - data_start) // spb
 
             if n_data_bits <= 0 or n_data_bits > available:
                 raise ValueError(
-                    f"قيمة header غير صالحة (N={n_data_bits}, متاح={available} بت).\n"
-                    "الملف تالف أو مُرمَّز بإصدار مختلف من socialdisk."
+                    f"Invalid header value (N={n_data_bits}, available={available} bits).\n"
+                    "File is corrupted or encoded with a different version of SocialDisk."
                 )
 
             # ══════════════════════════════════════════════════════════
-            #  STEP 4: قراءة N بت بيانات — FFT vectorized (سريع جداً)
+            #  STEP 4: Read N data bits — FFT vectorized (very fast)
             #
-            #  لكل إطار زمني (spb عينة):
-            #    mag0 = قوة freq_zero، mag1 = قوة freq_one
-            #    الأعلى = البت المُرسَل (0 أو 1)
+            #  For each time frame (spb samples):
+            #    mag0 = freq_zero power, mag1 = freq_one power
+            #    Higher power wins (0 or 1)
             #
-            #  نُعالج جميع الإطارات دفعة واحدة (vectorized) بدلاً من حلقة
-            #  → أسرع بـ 50-100× من حلقة Python خالصة
+            #  Process all frames at once (vectorized) instead of a loop
+            #  → 50-100× faster than a pure Python loop
             # ══════════════════════════════════════════════════════════
             data_segment = data[data_start: data_start + n_data_bits * spb]
 
-            # إعادة تشكيل إلى (n_data_bits, spb) للمعالجة الجماعية
+            # Reshape to (n_data_bits, spb) for batch processing
             frames     = data_segment.reshape(n_data_bits, spb)
             win        = np.hanning(spb)
             frames_win = frames * win   # broadcast: (n_data_bits, spb)
 
-            # FFT على جميع الإطارات دفعة واحدة
+            # FFT on all frames at once
             spectra = np.abs(np.fft.rfft(frames_win, axis=1))  # (n_data_bits, spb//2+1)
             freqs   = np.fft.rfftfreq(spb, 1.0 / _sr)
 
-            # إيجاد bin كل تردد (±2 bin للمتانة)
+            # Find bin for each frequency (±2 bins for robustness)
             idx0 = int(np.argmin(np.abs(freqs - _f0)))
             idx1 = int(np.argmin(np.abs(freqs - _f1)))
             lo0, hi0 = max(0, idx0 - 2), min(spectra.shape[1], idx0 + 3)
             lo1, hi1 = max(0, idx1 - 2), min(spectra.shape[1], idx1 + 3)
 
-            # قوة كل تردد لكل إطار
+            # Power of each frequency per frame
             mag0 = spectra[:, lo0:hi0].mean(axis=1)   # (n_data_bits,)
             mag1 = spectra[:, lo1:hi1].mean(axis=1)   # (n_data_bits,)
 
-            # قرار البت: الأعلى قوة يفوز
+            # Bit decision: highest power wins
             bits_arr = (mag1 > mag0).astype(np.uint8)
 
             # ══════════════════════════════════════════════════════════
-            #  STEP 5: فك التشفير الكامل
+            #  STEP 5: Full decryption
             # ══════════════════════════════════════════════════════════
             return VaultCore.unpack_payload(bits_arr, password, ecc_symbols=_ecc)
 
