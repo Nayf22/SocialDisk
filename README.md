@@ -125,7 +125,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/SocialDisk.git
+git clone https://github.com/Nayf22/SocialDisk.git
 cd SocialDisk
 
 # Install dependencies
@@ -619,7 +619,7 @@ SocialDisk is intended for **privacy protection, security research, and educatio
 
 ```bash
 # استنساخ المستودع
-git clone https://github.com/YOUR_USERNAME/SocialDisk.git
+git clone https://github.com/Nayf22/SocialDisk.git.git
 cd SocialDisk
 
 # تثبيت المتطلبات

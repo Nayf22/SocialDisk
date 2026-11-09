@@ -73,7 +73,7 @@ Edit `socialdisk/platforms.py` and add a new entry to the `PLATFORMS` dict:
 ## Development Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/SocialDisk.git
+git clone https://github.com/Nayf22/SocialDisk.git.git
 cd SocialDisk
 python -m venv .venv
 .venv\Scripts\activate      # Windows

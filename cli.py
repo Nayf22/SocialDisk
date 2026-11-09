@@ -446,23 +446,23 @@ def interactive_select_platform() -> Optional[str]:
         console.print(grid)
 
         console.print()
-        action_grid = Table.grid(expand=True, padding=(0, 1))
-        action_grid.add_column(ratio=1)
-        action_grid.add_column(ratio=1)
+        action_bar = Table.grid(padding=(0, 2))
+        action_bar.add_column()
+        action_bar.add_column()
         p_back = Panel(
-            Text.from_markup(f"[bold red]0.[/]  [bold white]{t('btn_back_to_menu')}[/]", justify="center"),
+            f"[bold red]0[/]  [bold white]{t('btn_back_to_menu')}[/]",
             border_style="red",
-            height=3,
-            padding=(0, 0),
+            expand=False,
+            padding=(0, 1),
         )
         p_refresh = Panel(
-            Text.from_markup(f"[bold cyan]r.[/]  [bold white]🔄  {t('btn_refresh')}[/]", justify="center"),
-            border_style="blue",
-            height=3,
-            padding=(0, 0),
+            f"[bold cyan]r[/]  [dim white]🔄  {t('btn_refresh')}[/]",
+            border_style="dim",
+            expand=False,
+            padding=(0, 1),
         )
-        action_grid.add_row(p_back, p_refresh)
-        console.print(action_grid)
+        action_bar.add_row(p_back, p_refresh)
+        console.print(action_bar)
         console.print()
         choice = Prompt.ask(
             f"[bold cyan]{t('platform_prompt_idx')} {t('prompt_back_hint')}[/]",
@@ -513,14 +513,13 @@ def interactive_select_operation(profile) -> Optional[str]:
     for num, label, _ in options:
         console.print(f"   [bold yellow]{num}.[/]  {label}")
     console.print()
-    console.print(
-        Panel(
-            Text.from_markup(f"[bold red]0.[/]  [bold white]{t('btn_back_to_platform')}[/]", justify="center"),
-            border_style="red",
-            height=3,
-            padding=(0, 0),
-        )
+    p_back = Panel(
+        f"[bold red]0[/]  [bold white]{t('btn_back_to_platform')}[/]",
+        border_style="red",
+        expand=False,
+        padding=(0, 1),
     )
+    console.print(p_back)
     console.print()
 
     choice = Prompt.ask(

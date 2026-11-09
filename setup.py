@@ -21,7 +21,7 @@ setup(
     description="Multi-platform steganography suite — hide & encrypt data inside images, video, and audio that survive social media compression",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/YOUR_USERNAME/SocialDisk",
+    url="https://github.com/Nayf22/SocialDisk.git",
     packages=find_packages(exclude=["tests*", "debug_*"]),
     py_modules=["cli", "SocialVault"],
     classifiers=[
