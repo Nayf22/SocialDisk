@@ -32,7 +32,7 @@
 
 <a id="english"></a>
 
-# 🇬🇧 English
+# US English
 
 ## 📖 What is SocialDisk?
 
@@ -533,7 +533,7 @@ SocialDisk is intended for **privacy protection, security research, and educatio
 
 <a id="arabic"></a>
 
-# 🇸🇦 العربية
+# AR العربية
 
 ## 📖 ما هو SocialDisk؟
 
