@@ -116,10 +116,30 @@ BANNER_LINES = [
 BANNER_COLORS = ["bold cyan", "bold cyan", "bold blue", "bold blue", "bold magenta", "bold magenta"]
 
 
+def clear_screen() -> None:
+    """Clear terminal screen and scrollback buffer reliably across all OSes and terminals."""
+    try:
+        if os.name == "nt":
+            os.system("cls")
+        else:
+            os.system("clear")
+    except Exception:
+        pass
+    try:
+        sys.stdout.write("\033[2J\033[3J\033[H")
+        sys.stdout.flush()
+    except Exception:
+        pass
+    try:
+        console.clear()
+    except Exception:
+        pass
+
+
 def print_banner(clear: bool = False) -> None:
     """Print the SocialDisk banner."""
     if clear:
-        console.clear()
+        clear_screen()
     console.print()
     for line, color in zip(BANNER_LINES, BANNER_COLORS):
         console.print(Align.center(f"[{color}]{line}[/]"))
@@ -512,21 +532,21 @@ def interactive_select_operation(profile) -> Optional[str]:
         (str(i), label, key) for i, (label, key) in enumerate(raw_ops, 1)
     ]
 
-    console.print(Rule(f"[bold cyan]{t('op_select_title')}[/]", style="blue"))
-    console.print()
-    for num, label, _ in options:
-        console.print(f"   [bold yellow]{num}.[/]  {label}")
-    console.print()
-    p_back = Panel(
-        f"[bold red]0[/]  [bold white]{t('btn_back_to_platform')}[/]",
-        border_style="red",
-        expand=False,
-        padding=(0, 1),
-    )
-    console.print(p_back)
-    console.print()
-
     while True:
+        console.print(Rule(f"[bold cyan]{t('op_select_title')}[/]", style="blue"))
+        console.print()
+        for num, label, _ in options:
+            console.print(f"   [bold yellow]{num}.[/]  {label}")
+        console.print()
+        p_back = Panel(
+            f"[bold red]0[/]  [bold white]{t('btn_back_to_platform')}[/]",
+            border_style="red",
+            expand=False,
+            padding=(0, 1),
+        )
+        console.print(p_back)
+        console.print()
+
         choice = Prompt.ask(
             f"[bold cyan]{t('op_prompt_idx')} {t('prompt_back_hint')}[/]",
             default="",
@@ -535,10 +555,7 @@ def interactive_select_operation(profile) -> Optional[str]:
         )
         choice_clean = choice.strip().lower()
         if not choice_clean:
-            console.print()
-            for num, label, _ in options:
-                console.print(f"   [bold yellow]{num}.[/]  {label}")
-            console.print()
+            print_banner(clear=True)
             continue
         if choice_clean in ("0", "b", "back", "q"):
             return None
