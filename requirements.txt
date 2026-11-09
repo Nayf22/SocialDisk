@@ -1,4 +1,4 @@
-# InstaDisk v2.0 — متطلبات Python
+# SocialDisk v2.0 — متطلبات Python
 # تثبيت: pip install -r requirements.txt
 # ══════════════════════════════════════════════════════════════════════════
 

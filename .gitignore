@@ -61,7 +61,6 @@ Thumbs.db
 
 # ── Project-specific: Temp media files ───────────────────────
 _socialdisk_temp_audio.wav
-_instadisk_temp_audio.wav
 debug_*.wav
 debug_*.png
 debug_*.mp4
@@ -74,6 +73,7 @@ debug_*.mp4
 *.pem
 *.env
 secrets.json
+.socialdisk_config.json
 
 # ── Logs ─────────────────────────────────────────────────────
 *.log

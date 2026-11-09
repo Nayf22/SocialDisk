@@ -23,6 +23,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/YOUR_USERNAME/SocialDisk",
     packages=find_packages(exclude=["tests*", "debug_*"]),
+    py_modules=["cli", "SocialVault"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.9",

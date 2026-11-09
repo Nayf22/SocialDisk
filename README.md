@@ -10,12 +10,13 @@
 <br/><br/>
 
 ```
-  ____             _       _ ____  _     _
- / ___|  ___   ___(_) __ _| |  _ \(_)___| | __
- \___ \ / _ \ / __| |/ _` | | | | | / __| |/ /
-  ___) | (_) | (__| | (_| | | |_| | \__ \   <
- |____/ \___/ \___|_|\__,_|_|____/|_|___/_|\_\
-                                          v2.0.0
+ ███████╗ ██████╗  ██████╗██╗ █████╗ ██╗     ██████╗ ██╗███████╗██╗  ██╗
+ ██╔════╝██╔═══██╗██╔════╝██║██╔══██╗██║     ██╔══██╗██║██╔════╝██║ ██╔╝
+ ███████╗██║   ██║██║     ██║███████║██║     ██║  ██║██║███████╗█████╔╝ 
+ ╚════██║██║   ██║██║     ██║██╔══██║██║     ██║  ██║██║╚════██║██╔═██╗ 
+ ███████║╚██████╔╝╚██████╗██║██║  ██║███████╗██████╔╝██║███████║██║  ██╗
+ ╚══════╝ ╚═════╝  ╚═════╝╚═╝╚═╝  ╚═╝╚══════╝╚═════╝ ╚═╝╚══════╝╚═╝  ╚═╝
+                                                                  v2.0.0
 ```
 
 ### **Hide & encrypt data inside images, video, and audio**
@@ -40,22 +41,35 @@
 > Every byte of hidden data is protected by a **5-layer security pipeline** before being embedded:
 
 ```
-Your Data
-    │
-    ▼
-① LZMA-9 Compression       ─── Shrinks data to minimum size
-    │
-    ▼
-② AES-256-GCM Encryption   ─── Military-grade encryption with authentication tag
-    │
-    ▼
-③ Reed-Solomon ECC          ─── Adds error-correction bits (survives up to 50% bit damage)
-    │
-    ▼
-④ Burst-Error Interleaving  ─── Shuffles bits to distribute compression damage evenly
-    │
-    ▼
-⑤ Steganography Engine      ─── Hides bits inside image/video/audio imperceptibly
+┌────────────────────────────────────────────────────────────────────────┐
+│                              Your Data                                 │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ① LZMA-9 Compression         ─── Shrinks data to absolute minimum size │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ② AES-256-GCM Encryption     ─── Military-grade security + Auth Tag    │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ③ Reed-Solomon ECC           ─── Recovers up to 50% bit corruption     │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ④ Burst-Error Interleaving   ─── Scatters localized compression errors │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ⑤ Multi-Engine Steganography ─── Imperceptible embedding into media    │
+│   (DCT Frequency / HyperGrid Video Matrix / Acoustic FSK Modem)        │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -446,25 +460,26 @@ python full_test.py
 ```
 SocialDisk/
 │
-├── socialdisk/                    # 🇬🇧 English package
-│   ├── __init__.py                # Package init, version
+├── socialdisk/                    # Core library package
+│   ├── __init__.py                # Package init, version, exports
 │   ├── core.py                    # VaultCore: AES-256-GCM + Reed-Solomon + LZMA
 │   ├── platforms.py               # 14+ platform profiles and dataclasses
 │   ├── api.py                     # SocialVault: high-level unified API
+│   ├── i18n/                      # Internationalization (Arabic + English)
+│   │   ├── __init__.py            # i18n manager & settings persistence
+│   │   ├── ar.py                  # Arabic translations
+│   │   └── en.py                  # English translations
 │   └── engines/
 │       ├── __init__.py
 │       ├── image.py               # DCT steganography engine
 │       ├── video.py               # HyperGrid video engine
 │       └── audio.py               # Acoustic FSK modem engine
 │
-├── instadisk/                     # 🇸🇦 Arabic package (identical logic)
-│   └── ...
-│
 ├── cli.py                         # Beautiful CLI (Rich UI, interactive + command mode)
 ├── full_test.py                   # 5-engine comprehensive test suite
 ├── test_import.py                 # Quick import verification
 ├── check_envs.py                  # Environment diagnostic tool
-├── instavault.py                  # Backward-compatibility wrapper
+├── SocialVault.py                 # Backward-compatibility wrapper
 │
 ├── requirements.txt               # Python dependencies
 ├── setup.py                       # Package installation
@@ -527,22 +542,35 @@ SocialDisk is intended for **privacy protection, security research, and educatio
 > كل بايت من البيانات يمر بـ **5 طبقات حماية** قبل الإخفاء:
 
 ```
-بياناتك
-    │
-    ▼
-① ضغط LZMA-9           ─── تقليص البيانات إلى أدنى حجم
-    │
-    ▼
-② تشفير AES-256-GCM    ─── تشفير عسكري مع علامة مصادقة
-    │
-    ▼
-③ تصحيح أخطاء Reed-Solomon ─── يصحح حتى 50% من الأخطاء
-    │
-    ▼
-④ تشابك البتات (Interleaving) ─── يوزع أضرار الضغط بالتساوي
-    │
-    ▼
-⑤ محرك الإخفاء (Steganography) ─── يخفي البيانات داخل الوسيط
+┌────────────────────────────────────────────────────────────────────────┐
+│                            بياناتك الأصلية                             │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ① ضغط LZMA-9                 ─── تقليص البيانات إلى أدنى حجم ممكن      │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ② تشفير AES-256-GCM          ─── تشفير عسكري مع علامة مصادقة أصلية     │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ③ تصحيح أخطاء Reed-Solomon   ─── استرجاع البيانات حتى مع تلف 50% بتات  │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ④ تشابك البتات (Interleave)  ─── تشتيت أضرار خوارزميات ضغط المنصات     │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ ⑤ محركات الإخفاء المتقدمة    ─── تضمين غير محسوس داخل الوسائط          │
+│   (ترددات DCT للصورة / مصفوفة HyperGrid للفيديو / مودم FSK للصوت)      │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---

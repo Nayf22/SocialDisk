@@ -16,6 +16,7 @@ Structure:
 from socialdisk.api import SocialVault
 from socialdisk.platforms import PLATFORMS, get_platform, list_platforms
 from socialdisk.core import VaultCore
+from socialdisk import i18n
 
 __version__ = "2.0.0"
-__all__ = ["SocialVault", "VaultCore", "PLATFORMS", "get_platform", "list_platforms"]
+__all__ = ["SocialVault", "VaultCore", "PLATFORMS", "get_platform", "list_platforms", "i18n"]

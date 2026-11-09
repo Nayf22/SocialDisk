@@ -22,9 +22,9 @@ candidates = [
     r'C:\ProgramData\anaconda3\python.exe',
     r'C:\ProgramData\miniconda3\python.exe',
     # PyCharm project venvs (شائعة)
-    r'C:\Users\pc\Desktop\instaDisk\.venv\Scripts\python.exe',
-    r'C:\Users\pc\Desktop\instaDisk\venv\Scripts\python.exe',
-    r'C:\Users\pc\Desktop\instaDisk\env\Scripts\python.exe',
+    r'C:\Users\pc\Desktop\SocialDisk\.venv\Scripts\python.exe',
+    r'C:\Users\pc\Desktop\SocialDisk\venv\Scripts\python.exe',
+    r'C:\Users\pc\Desktop\SocialDisk\env\Scripts\python.exe',
     # مشاريع PyCharm الأخرى
     r'C:\Users\pc\PycharmProjects',
     r'C:\Users\pc\.virtualenvs',
