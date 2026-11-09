@@ -1,7 +1,14 @@
-﻿"""
+"""
+Full test suite — 5 engines with real platform compression simulation
 اختبار شامل للمحركات الثلاثة مع محاكاة ضغط المنصة
 """
-import os, hashlib, tempfile
+# Ensure UTF-8 output on all platforms (critical for Windows CI)
+import sys, os, hashlib, tempfile
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 import numpy as np
 import cv2
 

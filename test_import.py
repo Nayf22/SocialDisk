@@ -1,4 +1,11 @@
 """Quick import test for socialdisk — verifies all modules and engines load correctly"""
+# Ensure UTF-8 output on all platforms (critical for Windows CI)
+import sys
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 from socialdisk import SocialVault, VaultCore
 from socialdisk.platforms import list_platforms
 from socialdisk.engines.image import DCTImageEngine
