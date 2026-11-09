@@ -466,10 +466,14 @@ def interactive_select_platform() -> Optional[str]:
         console.print()
         choice = Prompt.ask(
             f"[bold cyan]{t('platform_prompt_idx')} {t('prompt_back_hint')}[/]",
-            default="1",
+            default="",
+            show_default=False,
             console=console,
         )
         choice_clean = choice.strip().lower()
+        if not choice_clean:
+            print_banner(clear=True)
+            continue
         if choice_clean in ("r", "refresh"):
             print_banner(clear=True)
             continue
@@ -522,18 +526,25 @@ def interactive_select_operation(profile) -> Optional[str]:
     console.print(p_back)
     console.print()
 
-    choice = Prompt.ask(
-        f"[bold cyan]{t('op_prompt_idx')} {t('prompt_back_hint')}[/]",
-        default="1",
-        console=console,
-    )
-    choice_clean = choice.strip().lower()
-    if choice_clean in ("0", "b", "back", "q"):
-        return None
-    for num, _, key in options:
-        if choice_clean == num:
-            return key
-    return options[0][2]
+    while True:
+        choice = Prompt.ask(
+            f"[bold cyan]{t('op_prompt_idx')} {t('prompt_back_hint')}[/]",
+            default="",
+            show_default=False,
+            console=console,
+        )
+        choice_clean = choice.strip().lower()
+        if not choice_clean:
+            console.print()
+            for num, label, _ in options:
+                console.print(f"   [bold yellow]{num}.[/]  {label}")
+            console.print()
+            continue
+        if choice_clean in ("0", "b", "back", "q"):
+            return None
+        for num, _, key in options:
+            if choice_clean == num:
+                return key
 
 
 # ─── Embedding & Extracting Flows ─────────────────────────────────────────
@@ -544,8 +555,10 @@ def _prompt_payload() -> Optional[bytes]:
     console.print(f"   [yellow]1.[/]  {t('payload_source_text')}")
     console.print(f"   [yellow]2.[/]  {t('payload_source_file')}")
     console.print(f"   [yellow]0.[/]  [bold red]{t('btn_back')}[/]")
-    src = Prompt.ask(f"[bold cyan]{t('payload_source_prompt')}[/]", default="1", console=console)
+    src = Prompt.ask(f"[bold cyan]{t('payload_source_prompt')}[/]", default="", show_default=False, console=console)
     src_clean = src.strip().lower()
+    if not src_clean:
+        return _prompt_payload()
     if src_clean in ("0", "b", "back", "q"):
         return None
     if src_clean == "2":
@@ -918,8 +931,12 @@ def interactive_mode() -> None:
             console.print(f"   [bold yellow]{num}.[/]   [{clr}]{label}[/]")
 
         console.print()
-        choice = Prompt.ask(f"[bold cyan]{t('prompt_your_choice')}[/]", default="1", console=console)
+        choice = Prompt.ask(f"[bold cyan]{t('prompt_your_choice')}[/]", default="", show_default=False, console=console)
         console.print()
+
+        if not choice.strip():
+            print_banner(clear=True)
+            continue
 
         if choice == "0" or choice.lower() in ("exit", "quit", "q"):
             console.print(Panel(
