@@ -24,7 +24,7 @@
 
 <br/>
 
-[🇬🇧 English](#english) &nbsp;·&nbsp; [🇸🇦 العربية](#arabic)
+[US English](#english) &nbsp;·&nbsp; [AR العربية](#arabic)
 
 </div>
 
