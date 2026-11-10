@@ -36,6 +36,18 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from reedsolo import RSCodec, ReedSolomonError
 
 
+_RS_CACHE: dict[int, RSCodec] = {}
+
+
+def _get_rs_codec(nsym: int) -> RSCodec:
+    """Get or create a cached RSCodec instance to avoid recomputing GF log/exp tables."""
+    codec = _RS_CACHE.get(nsym)
+    if codec is None:
+        codec = RSCodec(nsym)
+        _RS_CACHE[nsym] = codec
+    return codec
+
+
 class VaultCore:
     """
     Multi-layer encryption and protection core.
@@ -75,17 +87,19 @@ class VaultCore:
                  that Reed-Solomon can correct more easily.
         """
         n   = len(data)
+        if n <= 1:
+            return data
         rng = random.Random(int.from_bytes(seed_bytes[:8], "big"))
         idx = list(range(n))
         rng.shuffle(idx)
-        out = bytearray(n)
+        arr = np.frombuffer(data, dtype=np.uint8)
+        idx_arr = np.array(idx, dtype=np.int32)
+        out = np.empty_like(arr)
         if not inverse:
-            for i, j in enumerate(idx):
-                out[j] = data[i]
+            out[idx_arr] = arr
         else:
-            for i, j in enumerate(idx):
-                out[i] = data[j]
-        return bytes(out)
+            out = arr[idx_arr]
+        return out.tobytes()
 
     # ------------------------------------------------------------------ #
     #  Full Encoding → Bit Array
@@ -128,7 +142,7 @@ class VaultCore:
         full_packet = cls.MAGIC + cls.VERSION + env_len_hdr + crc + envelope
 
         # 4. Reed-Solomon encoding for error correction
-        rsc         = RSCodec(ecc_symbols)
+        rsc         = _get_rs_codec(ecc_symbols)
         encoded_ecc = bytes(rsc.encode(full_packet))
 
         # 5. Interleaving with a key derived from the password
@@ -193,7 +207,7 @@ class VaultCore:
         encoded_ecc = cls._interleave(interleaved, seed, inverse=True)
 
         # 3. Reed-Solomon error correction
-        rsc = RSCodec(ecc_symbols)
+        rsc = _get_rs_codec(ecc_symbols)
         try:
             decoded_pkt, _, _ = rsc.decode(encoded_ecc)
             decoded_pkt = bytes(decoded_pkt)

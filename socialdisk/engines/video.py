@@ -110,23 +110,22 @@ class HyperGridVideoEngine:
                 "Ensure the directory exists and the file extension is .mp4"
             )
 
+        # --- Pre-build calibration template (shared across all frames — avoids redundant fill)
+        template = np.zeros((grid_h, grid_w, 3), dtype=np.uint8)
+        template[:m,  :, :] = cls.VAL_ONE   # top → white (VAL_ONE)
+        template[-m:, :, :] = cls.VAL_ZERO  # bottom → black (VAL_ZERO)
+        template[:,  :m, :] = cls.VAL_ONE   # left → white
+        template[:, -m:, :] = cls.VAL_ZERO  # right → black
+        # LUT: index 0 → VAL_ZERO, index 1 → VAL_ONE (faster than np.where)
+        lut = np.array([cls.VAL_ZERO, cls.VAL_ONE], dtype=np.uint8)
+
         for f_idx in range(total_frames):
-            frame_grid = np.zeros((grid_h, grid_w, 3), dtype=np.uint8)
+            frame_grid = template.copy()
 
-            # --- Calibration region (white/black borders for dynamic threshold)
-            frame_grid[:m,  :, :] = cls.VAL_ONE   # top → white (VAL_ONE)
-            frame_grid[-m:, :, :] = cls.VAL_ZERO  # bottom → black (VAL_ZERO)
-            frame_grid[:,  :m, :] = cls.VAL_ONE   # left → white
-            frame_grid[:, -m:, :] = cls.VAL_ZERO  # right → black
-
-            # --- Data region (embedded between borders)
+            # --- Data region using LUT (faster than np.where + 3 separate channel assigns)
             chunk    = padded_bits[f_idx * bpf : (f_idx + 1) * bpf]
-            chunk_2d = chunk.reshape((data_rows, data_cols))
-            val_grid = np.where(chunk_2d == 1, cls.VAL_ONE, cls.VAL_ZERO).astype(np.uint8)
-
-            frame_grid[m : -m, m : -m, 0] = val_grid
-            frame_grid[m : -m, m : -m, 1] = val_grid
-            frame_grid[m : -m, m : -m, 2] = val_grid
+            val_grid = lut[chunk.reshape((data_rows, data_cols))]
+            frame_grid[m : -m, m : -m, :] = val_grid[:, :, None]
 
             # --- Upscale to full resolution (Nearest-Neighbor — no edge smoothing)
             full_frame = cv2.resize(

@@ -198,26 +198,25 @@ class AcousticFSKEngine:
         # --- Build the complete signal (each element = one tone of spb samples)
         parts: list[np.ndarray] = []
 
-        # Leading silence (SILENCE_BITS zero tones)
-        for _ in range(SILENCE_BITS):
-            parts.append(np.zeros(spb, dtype=np.float32))
+        # Leading silence (vectorized — single pre-allocated block)
+        parts.append(np.zeros(SILENCE_BITS * spb, dtype=np.float32))
 
-        # SYNC preamble (PREAMBLE_BITS tones at SYNC frequency)
-        for _ in range(PREAMBLE_BITS):
-            parts.append(tone_sync)
+        # SYNC preamble (vectorized tile — no Python loop)
+        parts.append(np.tile(tone_sync, PREAMBLE_BITS))
 
         # Header bits (bit=1 → sync_freq, bit=0 → freq_zero)
         # Using sync_freq for header distinguishes it from data bits (which use f0/f1)
         for b in header_bits:
             parts.append(tone_sync if b == 1 else tone0)
 
-        # Data bits (bit=1 → freq_one, bit=0 → freq_zero)
-        for b in data_bits:
-            parts.append(tone1 if b == 1 else tone0)
+        # Data bits — vectorized (all frames at once, no Python loop)
+        data_sig = np.empty((len(data_bits), spb), dtype=np.float32)
+        data_sig[data_bits == 0] = tone0
+        data_sig[data_bits == 1] = tone1
+        parts.append(data_sig.ravel())
 
-        # Trailing silence (SILENCE_BITS zero tones)
-        for _ in range(SILENCE_BITS):
-            parts.append(np.zeros(spb, dtype=np.float32))
+        # Trailing silence (vectorized — single pre-allocated block)
+        parts.append(np.zeros(SILENCE_BITS * spb, dtype=np.float32))
 
         full_signal = np.concatenate(parts)
         pcm_data    = (full_signal * 28_000).astype(np.int16)

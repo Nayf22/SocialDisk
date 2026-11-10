@@ -19,8 +19,13 @@
                                                                   v2.0.0
 ```
 
-### **Hide & encrypt data inside images, video, and audio**
-### **Survives compression on Instagram, WhatsApp, TikTok, YouTube, and 10+ more**
+#### **Hide & encrypt any file or message inside ordinary images, videos, and audio**
+### **Hidden data survives Instagram, WhatsApp, TikTok, YouTube & 10+ platform compressions**
+
+<br/>
+
+> 💡 **Ever wanted to send a secret file through a public Instagram post, a WhatsApp photo, or a TikTok video — without anyone knowing it was ever there?**
+> That's exactly what SocialDisk does.
 
 <br/>
 
@@ -32,11 +37,15 @@
 
 <a id="english"></a>
 
-# US English
+# 🇺🇸 English
 
 ## 📖 What is SocialDisk?
 
-**SocialDisk** is a multi-platform steganography suite that lets you **secretly hide any file or message** inside ordinary media files — images, videos, or audio — that you can then post on any social media platform. The person on the other end downloads the media, runs SocialDisk, and recovers the hidden data perfectly, even after the platform's compression.
+**SocialDisk** lets you **secretly hide any file or message** inside completely normal-looking images, videos, or audio clips — then post them on any social platform. The person on the other end downloads the media, runs SocialDisk with the same password, and recovers the hidden data **perfectly** — even after heavy platform compression.
+
+🔥 **The killer feature:** Hidden data **survives** the aggressive compression applied by Instagram, WhatsApp, TikTok and others — thanks to Reed-Solomon error-correction and military-grade AES-256-GCM encryption baked into every file.
+
+✨ Supports **Arabic & English** with a beautiful interactive menu — no technical knowledge needed.
 
 > Every byte of hidden data is protected by a **5-layer security pipeline** before being embedded:
 
@@ -533,11 +542,15 @@ SocialDisk is intended for **privacy protection, security research, and educatio
 
 <a id="arabic"></a>
 
-# AR العربية
+# 🇸🇦 AR العربية
 
 ## 📖 ما هو SocialDisk؟
 
-**SocialDisk** هي أداة إخفاء وتشفير البيانات متعددة المنصات. تتيح لك **إخفاء أي ملف أو رسالة** داخل ملفات وسائط عادية — صور، فيديو، أو صوت — ثم نشرها على أي منصة تواصل اجتماعي. الشخص على الطرف الآخر يُنزِّل الوسيط، يُشغِّل SocialDisk، ويسترجع البيانات المخفية بشكل مثالي حتى بعد ضغط المنصة.
+**SocialDisk** تُتيح لك **إخفاء أي ملف أو رسالة بشكل سري** داخل صور أو فيديوهات أو ملفات صوتية تبدو عادية تماماً — ثم نشرها على واتساب أو إنستغرام أو تيك توك أو أي منصة أخرى. الشخص على الطرف الآخر يُنزِّل الملف، يُشغِّل SocialDisk بنفس كلمة المرور، ويسترجع البيانات **بشكل مثالي** — حتى بعد الضغط الشديد الذي تطبقه المنصات.
+
+🔥 **الميزة الأقوى:** البيانات المخفية **لا تضيع ولا تتلف** حتى بعد ضغط قوي — بفضل تقنيات تصحيح الأخطاء (Reed-Solomon) والتشفير العسكري (AES-256-GCM).
+
+✨ تدعم **اللغتين العربية والإنجليزية** مع واجهة تفاعلية سهلة جداً — لا تحتاج أي خبرة تقنية.
 
 > كل بايت من البيانات يمر بـ **5 طبقات حماية** قبل الإخفاء:
 
